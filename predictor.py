@@ -98,37 +98,116 @@ class Agent2Map(nn.Module):
 
         return output
 
+# class Decoder(nn.Module):
+#     def __init__(self, use_interaction):
+#         super(Decoder, self).__init__()
+#         self.use_interaction = use_interaction
+#         if use_interaction:
+#             self.cell = nn.GRUCell(input_size=128, hidden_size=384)
+#             self.plan_input = nn.Linear(3, 128)
+#             self.state_input = nn.Linear(3, 128)
+#         else:
+#             self.cell = nn.GRUCell(input_size=3, hidden_size=384)
+#         self.decode = nn.Sequential(nn.Dropout(0.1), nn.Linear(384, 64), nn.ELU(), nn.Linear(64, 3))
+
+#     def forward(self, init_hidden, plan, gate, init_state):
+#         output = []
+#         hidden = init_hidden
+#         state = init_state
+
+#         for t in range(30):
+#             if self.use_interaction:
+#                 plan_input = self.plan_input(plan[:, t, :3]) 
+#                 state_input = self.state_input(state[:, :3])
+#                 input = state_input + plan_input * gate
+#             else:
+#                 input = state[:, :3]
+
+#             hidden = self.cell(input, hidden)
+#             state = self.decode(hidden) + state[:, :3]
+#             output.append(state)
+
+#         output = torch.stack(output, dim=1)
+
+#         return output
+
 class Decoder(nn.Module):
     def __init__(self, use_interaction):
         super(Decoder, self).__init__()
         self.use_interaction = use_interaction
+        self.d_model = 384
+        self.nhead = 8
         if use_interaction:
-            self.cell = nn.GRUCell(input_size=128, hidden_size=384)
-            self.plan_input = nn.Linear(3, 128)
-            self.state_input = nn.Linear(3, 128)
+            self.plan_input = nn.Linear(3, self.d_model)
+            self.state_input = nn.Linear(3, self.d_model)
         else:
-            self.cell = nn.GRUCell(input_size=3, hidden_size=384)
-        self.decode = nn.Sequential(nn.Dropout(0.1), nn.Linear(384, 64), nn.ELU(), nn.Linear(64, 3))
-
+            self.state_input = nn.Linear(3, self.d_model)
+        
+        self.pos_encoding = PositionalEncoding(d_model=self.d_model, max_len=30)
+        self.attention_layer = nn.TransformerEncoderLayer(
+            d_model=self.d_model,
+            nhead=self.nhead,
+            dim_feedforward=1024,
+            dropout=0.1,
+            batch_first=True
+        )
+        self.decode = nn.Sequential(
+            nn.Dropout(0.1), 
+            nn.Linear(self.d_model, 64), 
+            nn.ELU(), 
+            nn.Linear(64, 3)
+        )
+    
     def forward(self, init_hidden, plan, gate, init_state):
+        batch_size = init_hidden.shape[0]
+        device = init_hidden.device
+        
+        # Initialize outputs and state
         output = []
-        hidden = init_hidden
-        state = init_state
-
+        state = init_state[:, :3]
+        
+        # History buffer for transformer context
+        seq_buffer = torch.zeros(batch_size, 30, self.d_model, device=device)
+        mask_buffer = torch.ones(batch_size, 30, dtype=torch.bool, device=device)
+        
         for t in range(30):
+            # Process current input based on interaction setting
             if self.use_interaction:
                 plan_input = self.plan_input(plan[:, t, :3]) 
-                state_input = self.state_input(state[:, :3])
-                input = state_input + plan_input * gate
+                state_input = self.state_input(state)
+                input_embed = state_input + plan_input * gate
             else:
-                input = state[:, :3]
-
-            hidden = self.cell(input, hidden)
-            state = self.decode(hidden) + state[:, :3]
+                input_embed = self.state_input(state)
+            
+            # Add initial state context
+            input_with_context = input_embed + init_hidden
+            
+            # Add to sequence buffer
+            seq_buffer[:, t] = input_with_context
+            mask_buffer[:, t] = False
+            
+            # Create causal attention mask for autoregressive generation
+            attn_mask = torch.triu(torch.ones(t+1, t+1) * float('-inf'), diagonal=1).to(device)
+            
+            # Apply transformer to sequence history (only process up to current timestep)
+            current_seq = seq_buffer[:, :t+1]
+            transformed = self.attention_layer(
+                current_seq, 
+                src_mask=attn_mask,
+                src_key_padding_mask=mask_buffer[:, :t+1]
+            )
+            
+            # Get the current timestep's output
+            hidden = transformed[:, -1]
+            
+            # Decode state update
+            state_update = self.decode(hidden)
+            
+            # Update state with residual connection
+            state = state + state_update
             output.append(state)
-
-        output = torch.stack(output, dim=1)
-
+        
+        output = torch.stack(output, dim=1)  
         return output
 
 class Predictor(nn.Module):
