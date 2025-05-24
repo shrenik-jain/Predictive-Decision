@@ -144,12 +144,15 @@ class Decoder(nn.Module):
             self.state_input = nn.Linear(3, self.d_model)
         
         self.pos_encoding = PositionalEncoding(d_model=self.d_model, max_len=30)
-        self.attention_layer = nn.TransformerEncoderLayer(
-            d_model=self.d_model,
-            nhead=self.nhead,
-            dim_feedforward=1024,
-            dropout=0.1,
-            batch_first=True
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=self.d_model,
+                nhead=self.nhead,
+                dim_feedforward=1024,
+                dropout=0.1,
+                batch_first=True
+            ),
+            num_layers=1
         )
         self.decode = nn.Sequential(
             nn.Dropout(0.1), 
@@ -161,55 +164,36 @@ class Decoder(nn.Module):
     def forward(self, init_hidden, plan, gate, init_state):
         batch_size = init_hidden.shape[0]
         device = init_hidden.device
+        outputs = []
+        current_state = init_state[:, :3].clone()
         
-        # Initialize outputs and state
-        output = []
-        state = init_state[:, :3]
-        
-        # History buffer for transformer context
-        seq_buffer = torch.zeros(batch_size, 30, self.d_model, device=device)
-        mask_buffer = torch.ones(batch_size, 30, dtype=torch.bool, device=device)
-        
+        # Process timesteps autoregressively
         for t in range(30):
-            # Process current input based on interaction setting
             if self.use_interaction:
-                plan_input = self.plan_input(plan[:, t, :3]) 
-                state_input = self.state_input(state)
-                input_embed = state_input + plan_input * gate
+                plan_features = self.plan_input(plan[:, t, :3]) 
+                state_features = self.state_input(current_state)
+                current_input = state_features + plan_features * gate
             else:
-                input_embed = self.state_input(state)
+                current_input = self.state_input(current_state)
             
-            # Add initial state context
-            input_with_context = input_embed + init_hidden
-            
-            # Add to sequence buffer
-            seq_buffer[:, t] = input_with_context
-            mask_buffer[:, t] = False
-            
-            # Create causal attention mask for autoregressive generation
-            attn_mask = torch.triu(torch.ones(t+1, t+1) * float('-inf'), diagonal=1).to(device)
-            
-            # Apply transformer to sequence history (only process up to current timestep)
-            current_seq = seq_buffer[:, :t+1]
-            transformed = self.attention_layer(
-                current_seq, 
-                src_mask=attn_mask,
-                src_key_padding_mask=mask_buffer[:, :t+1]
-            )
-            
-            # Get the current timestep's output
-            hidden = transformed[:, -1]
-            
-            # Decode state update
+            # Add context from initial hidden state
+            current_input = current_input + init_hidden
+            # Create sequence of length 1 for this timestep
+            current_seq = current_input.unsqueeze(1)
+            # Apply transformer (treating single timestep as a sequence of length 1)
+            transformed = self.transformer_encoder(current_seq)
+            # Extract features
+            hidden = transformed.squeeze(1)
+            # Decode next state update
             state_update = self.decode(hidden)
-            
-            # Update state with residual connection
-            state = state + state_update
-            output.append(state)
+            # Update state and append to outputs
+            next_state = current_state + state_update
+            outputs.append(next_state)
+            # Set up for next iteration
+            current_state = next_state.detach().clone()
         
-        output = torch.stack(output, dim=1)  
+        output = torch.stack(outputs, dim=1)
         return output
-
 class Predictor(nn.Module):
     def __init__(self, use_interaction):
         super(Predictor, self).__init__()
