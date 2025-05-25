@@ -10,15 +10,15 @@ source source_installations.sh
 nvidia-smi
 
 echo "**************************************************************************"
-echo "Starting training with SMARTS..."
+echo "Started Training"
 echo "**************************************************************************"
 
 # python train.py --use_exploration --use_interaction
-python test.py --model_path models/tranformer_predictor_0.8580.pth
+python test.py --model_path models/tranformer_predictor_0.8580.pth --use_interaction True --decoder transformer
 
 echo "**************************************************************************"
-echo "Training completed successfully."
+echo "Completed Training"
 echo "**************************************************************************"
-ls /src/code
 
-zip /src/results/training_log.zip -r /src/code/training_log/
+# zip /src/results/training_log.zip -r /src/code/training_log/
+zip /src/results/testing_log.zip -r /src/code/testing_log/
