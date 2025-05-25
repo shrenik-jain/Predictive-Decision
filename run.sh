@@ -14,11 +14,11 @@ echo "Started Training"
 echo "**************************************************************************"
 
 # python train.py --use_exploration --use_interaction
-python test.py --model_path models/tranformer_predictor_0.8580.pth --use_interaction --decoder transformer
+python test.py --model_path models/gru_predictor_0.6672.pth --use_interaction --decoder gru
 
 echo "**************************************************************************"
 echo "Completed Training"
 echo "**************************************************************************"
 
 # zip /src/results/training_log.zip -r /src/code/training_log/
-zip /src/results/testing_log.zip -r /src/code/testing_log/
+zip /src/results/gru_testing_log.zip -r /src/code/testing_log/
