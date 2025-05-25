@@ -22,10 +22,14 @@ class Policy:
             raise ValueError(f"Unsupported decoder type: {decoder_type}")
         self.predictor.eval()
         self.planner = Planner(self.predictor, use_interaction, render)
+    
+    def load_transformer_decoder(self, model_path):
+        state_dict = torch.load(model_path, map_location='cpu')
+        filtered_dict = {k: v for k, v in state_dict.items() if not (k.startswith('decoder.cell') or 'gru' in k.lower())}
+        self.predictor.load_state_dict(filtered_dict, strict=False)
 
     def act(self, obs, env_input):
         actions = self.planner.plan(obs, env_input)
-        
         return actions
 
 scenarios = [
