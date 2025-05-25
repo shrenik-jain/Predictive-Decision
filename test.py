@@ -5,15 +5,21 @@ import csv
 import numpy as np
 import argparse
 from planner import Planner
-from predictor import Predictor
+from predictor import Predictor, Decoder
 from observation import observation_adapter
 from smarts.core.utils.episodes import episodes
 
 # build agent
 class Policy:
-    def __init__(self, model, use_interaction=False, render=False):
+    def __init__(self, model, use_interaction=False, render=False, decoder_type='transformer'):
         self.predictor = Predictor(use_interaction)
-        self.predictor.load_state_dict(torch.load(model, map_location='cpu'))
+        if decoder_type == 'gru':
+            self.predictor.load_state_dict(torch.load(model, map_location='cpu'))
+        elif decoder_type == 'transformer':    
+            self.predictor.decoder = Decoder(use_interaction)
+            self.load_transformer_decoder(model)
+        else:
+            raise ValueError(f"Unsupported decoder type: {decoder_type}")
         self.predictor.eval()
         self.planner = Planner(self.predictor, use_interaction, render)
 
@@ -33,7 +39,7 @@ def main(args):
     os.makedirs(log_path, exist_ok=True)
     success_rate = []
     test_epoch = 0
-    policy = Policy(args.model_path, use_interaction=args.use_interaction)
+    policy = Policy(args.model_path, use_interaction=args.use_interaction, decoder_type=args.decoder)
 
     with open(log_path+"test_log.csv", 'w') as csv_file: 
         writer = csv.writer(csv_file) 
@@ -89,6 +95,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_interaction', action='store_true', help='whether using interaction-aware prediction', default=False)
     parser.add_argument('--envision_gui', action='store_true', help='visualize in envision', default=False)
     parser.add_argument('--sumo_gui', action='store_true', help='visualize in sumo', default=False)
+    parser.add_argument('--decoder', type=str, default='transformer', choices=['gru', 'transformer'], help='Decoder architecture to use')
     args = parser.parse_args()
 
     main(args)
