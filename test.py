@@ -12,9 +12,10 @@ from smarts.core.utils.episodes import episodes
 # build agent
 class Policy:
     def __init__(self, model, use_interaction=False, render=False, decoder_type='transformer'):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.predictor = Predictor(use_interaction)
         if decoder_type == 'gru':
-            self.predictor.load_state_dict(torch.load(model, map_location='cpu'))
+            self.predictor.load_state_dict(torch.load(model, map_location=self.device))
         elif decoder_type == 'transformer':    
             self.predictor.decoder = Decoder(use_interaction)
             self.load_transformer_decoder(model)
@@ -24,7 +25,7 @@ class Policy:
         self.planner = Planner(self.predictor, use_interaction, render)
     
     def load_transformer_decoder(self, model_path):
-        state_dict = torch.load(model_path, map_location='cpu')
+        state_dict = torch.load(model_path, map_location=self.device)
         filtered_dict = {k: v for k, v in state_dict.items() if not (k.startswith('decoder.cell') or 'gru' in k.lower())}
         self.predictor.load_state_dict(filtered_dict, strict=False)
 

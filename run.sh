@@ -14,7 +14,7 @@ echo "Starting training with SMARTS..."
 echo "**************************************************************************"
 
 # python train.py --use_exploration --use_interaction
-python test.py --model_path model/predictor_0.8580.pth
+python test.py --model_path models/tranformer_predictor_0.8580.pth
 
 echo "**************************************************************************"
 echo "Training completed successfully."
