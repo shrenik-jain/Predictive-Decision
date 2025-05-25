@@ -10,3 +10,6 @@ bash utils/setup/install_deps.sh
 
 # Install smarts with comp-1 branch.
 pip install "smarts[camera-obs] @ git+https://github.com/huawei-noah/SMARTS.git@comp-1"
+
+echo "SMARTS installed successfully."
+echo "**************************************************************************"

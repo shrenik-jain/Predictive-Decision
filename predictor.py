@@ -194,6 +194,7 @@ class Decoder(nn.Module):
         
         output = torch.stack(outputs, dim=1)
         return output
+    
 class Predictor(nn.Module):
     def __init__(self, use_interaction):
         super(Predictor, self).__init__()

@@ -12,4 +12,5 @@ pip install "charset_normalizer<3"
 pip install "typing-extensions==4.5.0"
 pip install "pathos==0.2.8" "tabulate>=0.8.10" waymo-open-dataset-tf-2-4-0
 
-echo "All dependencies installed in Conda environment: wormhole"
+echo "All dependencies installed in Conda environment: smarts"
+echo "**************************************************************************"

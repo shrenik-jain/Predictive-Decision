@@ -9,4 +9,4 @@ source source_installations.sh
 
 python train.py --use_exploration --use_interaction
 
-zip /src/results/training_logs.zip -r training_logs/
+zip /src/results/training_log.zip -r /src/code/training_log/
