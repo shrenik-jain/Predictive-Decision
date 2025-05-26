@@ -21,4 +21,4 @@ echo "Completed Training"
 echo "**************************************************************************"
 
 # zip /src/results/training_log.zip -r /src/code/training_log/
-zip /src/results/trans_testing_log.zip -r /src/code/testing_log/
+zip /src/results/trans_test_log.zip -r /src/code/test_log/
