@@ -127,6 +127,11 @@ def main(args):
                 print(f"Success: {success}, Collision: {collision}")
                 writer.writerow([train_epoch, timesteps, collision, success, np.mean(success_rate)])
 
+        # save model every 200 epochs
+        if train_epoch > 0 and train_epoch % 200 == 0:
+            torch.save(predictor.state_dict(), log_path+f'trans_predictor_epoch_{train_epoch}.pth')
+            print(f"Model saved at epoch {train_epoch}")
+
     # save model
     torch.save(predictor.state_dict(), log_path+f'predictor_{np.mean(fde):.4f}.pth')
 
@@ -137,7 +142,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training')
     parser.add_argument('--name', type=str, help='log name (default: "Exp1")', default="Exp1")
-    parser.add_argument('--epochs', type=int, help='training epochs (default: 1000)', default=1000)
+    parser.add_argument('--epochs', type=int, help='training epochs (default: 1000)', default=1500)
     parser.add_argument('--batch_size', type=int, help='batch size (default: 32)', default=32)
     parser.add_argument('--learning_rate', type=float, help='learning rate (default: 2e-4)', default=2e-4)
     parser.add_argument('--use_exploration', action="store_true", help='if use exploration', default=False)

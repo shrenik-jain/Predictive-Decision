@@ -13,12 +13,12 @@ echo "**************************************************************************
 echo "Started Training"
 echo "**************************************************************************"
 
-# python train.py --use_exploration --use_interaction
-python test.py --model_path models/lstm_predictor_0.6651.pth --use_interaction --decoder lstm
+python train.py --use_exploration --use_interaction
+# python test.py --model_path models/lstm_predictor_0.6651.pth --use_interaction --decoder lstm
 
 echo "**************************************************************************"
 echo "Completed Training"
 echo "**************************************************************************"
 
-# zip /src/results/lstm_training_log.zip -r /src/code/training_log/
-zip /src/results/lstm_test_log.zip -r /src/code/test_log/
+zip /src/results/trans_training_log.zip -r /src/code/training_log/
+# zip /src/results/lstm_test_log.zip -r /src/code/test_log/
