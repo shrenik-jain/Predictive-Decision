@@ -14,7 +14,7 @@ class Policy:
     def __init__(self, model, use_interaction=False, render=False, decoder_type='transformer'):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.predictor = Predictor(use_interaction)
-        if decoder_type == 'gru':
+        if decoder_type in ['lstm', 'gru']:
             self.predictor.load_state_dict(torch.load(model, map_location=self.device))
         elif decoder_type == 'transformer':    
             self.predictor.decoder = Decoder(use_interaction)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_interaction', action='store_true', help='whether using interaction-aware prediction', default=False)
     parser.add_argument('--envision_gui', action='store_true', help='visualize in envision', default=False)
     parser.add_argument('--sumo_gui', action='store_true', help='visualize in sumo', default=False)
-    parser.add_argument('--decoder', type=str, default='transformer', choices=['gru', 'transformer'], help='Decoder architecture to use')
+    parser.add_argument('--decoder', type=str, default='transformer', choices=['gru', 'transformer', 'lstm'], help='Decoder architecture to use')
     args = parser.parse_args()
 
     main(args)
