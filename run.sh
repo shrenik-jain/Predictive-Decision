@@ -14,7 +14,7 @@ echo "Started Training"
 echo "**************************************************************************"
 
 # python train.py --use_exploration --use_interaction
-python test.py --model_path models/transformer_1500epochs_predictor_0.6500.pth --use_interaction --decoder gru
+python test.py --model_path models/transformer_1500epochs_predictor_0.6500.pth --use_interaction --decoder lstm
 
 echo "**************************************************************************"
 echo "Completed Training"
