@@ -103,17 +103,19 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.use_interaction = use_interaction
         if use_interaction:
-            self.cell = nn.GRUCell(input_size=128, hidden_size=384)
+            self.cell = nn.LSTMCell(input_size=128, hidden_size=384)
             self.plan_input = nn.Linear(3, 128)
             self.state_input = nn.Linear(3, 128)
         else:
-            self.cell = nn.GRUCell(input_size=3, hidden_size=384)
+            self.cell = nn.LSTMCell(input_size=3, hidden_size=384)
         self.decode = nn.Sequential(nn.Dropout(0.1), nn.Linear(384, 64), nn.ELU(), nn.Linear(64, 3))
 
     def forward(self, init_hidden, plan, gate, init_state):
         output = []
         hidden = init_hidden
         state = init_state
+        # Initialize cell state with zeros
+        cell_state = torch.zeros_like(init_hidden)
 
         for t in range(30):
             if self.use_interaction:
@@ -123,7 +125,7 @@ class Decoder(nn.Module):
             else:
                 input = state[:, :3]
 
-            hidden = self.cell(input, hidden)
+            hidden, cell_state = self.cell(input, (hidden, cell_state))
             state = self.decode(hidden) + state[:, :3]
             output.append(state)
 
@@ -131,70 +133,6 @@ class Decoder(nn.Module):
 
         return output
 
-# class Decoder(nn.Module):
-#     def __init__(self, use_interaction):
-#         super(Decoder, self).__init__()
-#         self.use_interaction = use_interaction
-#         self.d_model = 384
-#         self.nhead = 8
-#         if use_interaction:
-#             self.plan_input = nn.Linear(3, self.d_model)
-#             self.state_input = nn.Linear(3, self.d_model)
-#         else:
-#             self.state_input = nn.Linear(3, self.d_model)
-        
-#         self.pos_encoding = PositionalEncoding(d_model=self.d_model, max_len=30)
-#         self.transformer_encoder = nn.TransformerEncoder(
-#             nn.TransformerEncoderLayer(
-#                 d_model=self.d_model,
-#                 nhead=self.nhead,
-#                 dim_feedforward=1024,
-#                 dropout=0.1,
-#                 batch_first=True
-#             ),
-#             num_layers=1
-#         )
-#         self.decode = nn.Sequential(
-#             nn.Dropout(0.1), 
-#             nn.Linear(self.d_model, 64), 
-#             nn.ELU(), 
-#             nn.Linear(64, 3)
-#         )
-    
-#     def forward(self, init_hidden, plan, gate, init_state):
-#         batch_size = init_hidden.shape[0]
-#         device = init_hidden.device
-#         outputs = []
-#         current_state = init_state[:, :3].clone()
-        
-#         # Process timesteps autoregressively
-#         for t in range(30):
-#             if self.use_interaction:
-#                 plan_features = self.plan_input(plan[:, t, :3]) 
-#                 state_features = self.state_input(current_state)
-#                 current_input = state_features + plan_features * gate
-#             else:
-#                 current_input = self.state_input(current_state)
-            
-#             # Add context from initial hidden state
-#             current_input = current_input + init_hidden
-#             # Create sequence of length 1 for this timestep
-#             current_seq = current_input.unsqueeze(1)
-#             # Apply transformer (treating single timestep as a sequence of length 1)
-#             transformed = self.transformer_encoder(current_seq)
-#             # Extract features
-#             hidden = transformed.squeeze(1)
-#             # Decode next state update
-#             state_update = self.decode(hidden)
-#             # Update state and append to outputs
-#             next_state = current_state + state_update
-#             outputs.append(next_state)
-#             # Set up for next iteration
-#             current_state = next_state.detach().clone()
-        
-#         output = torch.stack(outputs, dim=1)
-#         return output
-    
 class Predictor(nn.Module):
     def __init__(self, use_interaction):
         super(Predictor, self).__init__()
