@@ -261,3 +261,4 @@ class Predictor(nn.Module):
         prediction = torch.stack(per_agent_prediction_list, dim=1)
 
         return prediction
+
