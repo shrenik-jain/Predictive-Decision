@@ -1,83 +1,124 @@
-# Predictive-Decision-making
+# Predictive Decision Making
 
-This repository contains the code for the following paper:
+This repository contains the implementation for Learning Interaction-aware Motion Prediction Model for Decision-making in Autonomous Driving. The work proposes an interaction-aware predictor to forecast neighboring agents' future trajectories conditioned on the ego vehicle's potential plans, integrated with a sampling-based planner for safe autonomous driving.
 
-**Learning Interaction-aware Motion Prediction Model for Decision-making in Autonomous Driving**
-<br> [Zhiyu Huang](https://mczhi.github.io/), [Haochen Liu](https://scholar.google.com/citations?user=iizqKUsAAAAJ&hl=en), [Jingda Wu](https://wujingda.github.io/), [Wenhui Huang](https://scholar.google.co.kr/citations?user=Hpatee0AAAAJ&hl=en), [Chen Lv](https://scholar.google.com/citations?user=UKVs2CEAAAAJ&hl=en) 
-<br> [AutoMan Research Lab, Nanyang Technological University](https://lvchen.wixsite.com/automan)
-<br> **[[arXiv]](https://arxiv.org/abs/2302.03939)**
+# Framework Overview
+The framework consists of two main components:
 
-If you are looking for or interested in our winning solutions (Team AID) at [NeurIPS 2022 Driving SMARTS Competition](https://smarts-project.github.io/archive/2022_nips_driving_smarts/), please go to [track 1 solution](https://github.com/MCZhi/Predictive-Decision/tree/smarts-comp-track1) and [track 2 solution](https://github.com/MCZhi/Predictive-Decision/tree/smarts-comp-track2).
+1. <u>Interaction Aware Predictor</u>: Forecasts neighboring agents' future trajectories based on the ego vehicle's potential plans
 
-## Framework
-We propose an interaction-aware predictor to forecast the neighboring agents' future trajectories around the ego vehicle conditioned on the ego vehicle's potential plans. A sampling-based planner will do collision checking and select the optimal trajectory considering the distance to the goal, ride comfort, and safety. The overall framework of our method is given below.
+2. <u>Sampling Based Planner</u>: Performs collision checking and selects optimal trajectories considering distance to goal, ride comfort, and safety
 
-![Overview of our method](./docs/process.png)
+# Decoder Architectures
+The repository implements three different decoder architectures for trajectory prediction:
 
-## Results
-Examples of our framework navigating in various scenarios are shown below.
-### Left turn
-https://user-images.githubusercontent.com/34206160/204998517-16b5fe6d-c342-42b4-bba6-d0b7a0ea3c7c.mp4
+1. LSTM Decoder `(predictor.py)`
+- Architecture: Long Short-Term Memory (LSTM) based decoder
+- Implementation: Uses nn.LSTMCell with hidden size 384
+- Features:
+    - Handles long-term dependencies effectively
+    - Maintains separate cell state and hidden state
+    - Input size: 128 (with interaction) or 3 (without interaction)
 
-### Merge
-https://user-images.githubusercontent.com/34206160/204999331-6425b1ae-4cc6-4b11-90e9-21b5f84f95fa.mp4
+2. GRU Decoder `(predictor_gru.py)`
+- Architecture: Gated Recurrent Unit (GRU) based decoder
+- Implementation: Uses nn.GRUCell with hidden size 384
+- Features:
+    - Simpler than LSTM with fewer parameters
+    - Single hidden state (no separate cell state)
+    - Faster training and inference
 
-### Overtake
-https://user-images.githubusercontent.com/34206160/205000341-42c50dd7-ec4f-42fd-8a36-3965332bc13d.mp4
+3. Transformer Decoder `(predictor_transformer.py)`
+- Architecture: Transformer-based decoder with attention mechanisms
+- Components:
+    - Implementation: Uses nn.TransformerEncoder with hidden size 384
+- Features:
+    - Parallel processing capabilities
+    - Attention-based interaction modeling
+    - Better handling of long-range dependencies
 
-## How to use
-### Create a new Conda environment
-```bash
-conda create -n smarts python=3.8
+
+# Repository Structure
+```
+.
+├── README.MD                           
+├── docs/                              
+│   └── process.png                    
+├── models/                            
+│   ├── gru_predictor_0.6672.pth      
+│   ├── lstm_predictor_0.6651.pth     
+│   └── transformer_1500epochs_predictor_0.6500.pth  
+├── interaction_aware_predictor.pth    
+├── observation.py                     
+├── planner_utils.py                   
+├── planner.py                         
+├── predictor.py                       
+├── predictor_gru.py                   
+├── predictor_transformer.py          
+├── train_utils.py                    
+├── train.py                          
+├── test.py                           
+├── run.sh                            
+├── smarts.sh                         
+├── source_installations.sh           
+└── start.sh                          
 ```
 
-### Install the SMARTS simulator
-```bash
-conda activate smarts
-```
+# Key Features
+Interaction-Aware Prediction
+All decoders support interaction-aware prediction through:
 
-Install the [SMARTS simulator](https://smarts.readthedocs.io/en/latest/setup.html). 
-```bash
-# Download SMARTS
-git clone https://github.com/huawei-noah/SMARTS.git
-cd <path/to/SMARTS>
-git checkout comp-1
+1. Plan Input: Takes ego vehicle's planned trajectory as input
+2. State Input: Considers current state of neighboring agents
+3. Gate Mechanism: Controls the influence of ego vehicle's plan on predictions
 
-# Install the system requirements.
-bash utils/setup/install_deps.sh
+## Training and Evaluation
+#### Training Scenarios:
+- `1_to_2lane_left_turn_c`
+- `3lane_merge_single_agent`
+- `3lane_overtake`
 
-# Install smarts with comp-1 branch.
-pip install "smarts[camera-obs] @ git+https://github.com/huawei-noah/SMARTS.git@comp-1"
-```
+#### Metrics:
+- ADE (Average Displacement Error): Average L2 distance over prediction horizon
+- FDE (Final Displacement Error): L2 distance at final prediction step
+- Success Rate: Percentage of episodes reaching the goal
 
-### Install Pytorch
-```bash
-conda install pytorch==1.12.0 -c pytorch
-```
+# Setup and Installation
 
-### Training
-Run `train.py`. Leave other arguments vacant to use the default setting.
-```bash
-python train.py --use_exploration --use_interaction
-```
+To get started with the model, follow these steps:
 
-### Testing
-Run `test.py`. You need specify the path to the trained predictor `--model_path`. You can aslo set `--envision_gui` to visualize the performance of the framework in envision or set `--sumo_gui` to visualize in sumo.
-```bash
-python test.py --model_path /training_log/Exp/model.pth
-```
-To visualize in Envision (some bugs exist in showing the road map), you need to manually start the envision server and then go to `http://localhost:8081/`.
-```bash
-scl envision start -p 8081
-```
+### 1. Running the Model
 
-## Citation
-If you find this repo to be useful in your research, please consider citing our work
-```
-@article{huang2023learning,
-  title={Learning Interaction-aware Motion Prediction Model for Decision-making in Autonomous Driving},
-  author={Huang, Zhiyu and Liu, Haochen and Wu, Jingda and Huang, Wenhui and Lv, Chen},
-  journal={arXiv preprint arXiv:2302.03939},
-  year={2023}
-}
-```
+You can directly execute the `run.sh` script to train or test the model. Follow the instructions below to configure the script for each task:
+
+- **For Training**: Uncomment **line 16** and comment out **line 17** in `run.sh`.
+- **For Testing**: Uncomment **line 17** and comment out **line 16** in `run.sh`.
+
+### 2. Setting Up the Decoder Type
+
+The model supports multiple decoders, such as LSTM, GRU, and Transformer. To use a specific type of decoder, you must modify the `predictor.py` file.
+
+- Rename the `predictor_{decoder_type}.py` file to `predictor.py` based on the decoder you wish to use.
+  - For example, for an **LSTM-based decoder**, you can leave the `predictor.py` file as is (default).
+  - For a **Transformer-based decoder**, rename `predictor_transformer.py` to `predictor.py`.
+
+> **Note**: The default decoder is LSTM. You can switch to another type by following the renaming procedure described above.
+
+### 3. Configuring for Testing
+
+To ensure the model uses the same predictor for both training and testing:
+
+- When running the model for testing, make sure to use the same predictor type as you did for training.
+- Additionally, include the `--decoder {decoder_type}` flag in the testing command to specify the decoder type.
+
+---
+
+### Example Usage
+
+If you want to use the **Transformer-based Decoder** for testing:
+
+1. Rename the current `predictor.py` to `predictor_lstm.py` (since the default is LSTM).
+2. Rename `predictor_transformer.py` to `predictor.py`.
+3. Follow the instructions in Step 1 of the **Running the Model** section to execute the `run.sh` script.
+
+This setup will allow you to run the model with the desired decoder type.

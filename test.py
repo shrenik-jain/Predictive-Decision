@@ -12,8 +12,10 @@ from smarts.core.utils.episodes import episodes
 # build agent
 class Policy:
     def __init__(self, model, use_interaction=False, render=False, decoder_type='transformer'):
+        # set device based on availability of GPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.predictor = Predictor(use_interaction)
+        # load the model based on the decoder type
         if decoder_type in ['lstm', 'gru']:
             self.predictor.load_state_dict(torch.load(model, map_location=self.device))
         elif decoder_type == 'transformer':    
