@@ -100,7 +100,7 @@ class Agent2Map(nn.Module):
 
 class Decoder(nn.Module):
     """
-    Decoder for trajectory prediction.
+    LSTM-based Decoder for trajectory prediction.
     It can use interaction-aware input or not.
     If use_interaction is True, the input will be the interaction-aware state and plan.
     If use_interaction is False, the input will be the state and plan without interaction.
